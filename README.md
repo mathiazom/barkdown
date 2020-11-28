@@ -1,4 +1,4 @@
-# bearBookList
+# bearBookList 🐼📚 
 
 Simple Flask server to generate a markdown representation of a list of books.
 1. Books are defined as Adlibris URL stubs at https://foxtrot.bearblog.dev/bearbookslist/
