@@ -1,1 +1,1 @@
-worker: python3 bearinator.py
+web: python3 bearinator.py

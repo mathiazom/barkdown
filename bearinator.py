@@ -1,9 +1,12 @@
+import os
+from flask import Flask,render_template
 import requests
 from bs4 import BeautifulSoup
 import re
 from colorama import init
 from termcolor import colored
 
+BOOK_URL_SOURCE_URL = "https://foxtrot.bearblog.dev/bearbookslist/"
 BOOK_URL_SOURCE_FILE = "booklist.txt"
 BOOK_DATA_SOURCE_PREFIX = "https://www.adlibris.com/no/bok/"
 MARKDOWN_FILE = "booklist.md"
@@ -34,8 +37,8 @@ def generate_markdown(books):
     markdown += generate_markdown_from_book(books.pop(0),1)
 
     for i,book in enumerate(books):
-        markdown += "---\n"
-        markdown += generate_markdown_from_book(book, i+2)
+        book_markdown = "---\n" + generate_markdown_from_book(book, i+2)
+        markdown += book_markdown
 
     print(colored("Done","green"))
 
@@ -88,23 +91,29 @@ def get_book_from_url(url):
 
 def get_book_urls():
 
-    print("Retrieving URLs from file... ",end="")
+    print(f"Retrieving URLs from {BOOK_URL_SOURCE_URL}")
 
-    suffixes = read_data_lines(BOOK_URL_SOURCE_FILE)
+    page = BeautifulSoup(requests.get(BOOK_URL_SOURCE_URL).text, 'html.parser')
+
+    list = page.find("div",{'id':'books'})
+
+    suffixes = list.findAll("p")
 
     print(colored(f"Found {len(suffixes)} URLs","green"))
 
-    return [BOOK_DATA_SOURCE_PREFIX + s.strip() for s in suffixes]
+    return [BOOK_DATA_SOURCE_PREFIX + s.string.strip() for s in suffixes]
 
 
+app = Flask(__name__)
+
+@app.route("/")
 def main():
 
     init()
 
-    # Get URLs from file
     urls = get_book_urls()
 
-    # Get adlibris data from URL
+    # Get adlibris data from URLs
     books = [get_book_from_url(url) for url in urls]
 
     # Generate markdown
@@ -113,5 +122,13 @@ def main():
     # Write to markdown file
     update_markdown(MARKDOWN_FILE, markdown)
 
+    print(markdown)
 
-main()
+    source_markdown = repr(markdown)[1:-1]
+
+    return render_template("output.html",output=markdown.split("\n"))
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)
