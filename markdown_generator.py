@@ -1,3 +1,5 @@
+import datetime
+
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -15,31 +17,29 @@ BOOK_URL_SOURCE = "https://foxtrot.bearblog.dev/bearbookslist/"
 BOOK_DATA_SOURCE_PREFIX = "https://www.adlibris.com/no/bok/"
 
 
-'''
-    Retrieve list of book urls from the defined Bear page
-'''
 def get_book_urls():
-
-    print(f"Retrieving URLs from {BOOK_URL_SOURCE}")
+    """
+        Retrieve list of book urls from the defined Bear page
+    """
+    print(f"Retrieving book URLs from {BOOK_URL_SOURCE}")
 
     page = BeautifulSoup(requests.get(BOOK_URL_SOURCE).text, 'html.parser')
 
-    list = page.find("div",{'id':'books'})
+    books = page.find("div", {'id': 'books'})
 
-    suffixes = list.findAll("p")
+    suffixes = books.findAll("p")
 
-    print(colored(f"Found {len(suffixes)} URLs","green"))
+    print(colored(f"Found {len(suffixes)} book URLs", "green"))
 
     return [BOOK_DATA_SOURCE_PREFIX + s.string.strip() for s in suffixes]
 
 
-'''
-    Extract the author of the book presented on the given page
-    Author field is less accessable than the title and description,
-    but can be retrieved from an inline Javascript variable
-'''
 def get_book_author_from_page(page):
-
+    """
+        Extract the author of the book presented on the given page
+        Author field is less accessible than the title and description,
+        but can be retrieved from an inline Javascript variable
+    """
     scripts = page.findAll("script")
 
     author = ""
@@ -50,79 +50,82 @@ def get_book_author_from_page(page):
 
         content = s.contents[0]
 
-        authorMatch = re.search('"Authors":\[".*"\]',content)
+        author_match = re.search('"Authors":\[".*"\]', content)
 
-        if not authorMatch:
+        if not author_match:
             continue
 
-        author_string = authorMatch.group()
+        author_string = author_match.group()
 
-        author = re.search('\[".*"\]',author_string).group()[2:-2]
+        author = re.search('\[".*"\]', author_string).group()[2:-2]
 
     return author
 
-'''
-    Extract data about the book from the page on the given url
-    returns book as tuple
-'''
-def get_book_from_url(url):
 
+def clean_book_html_data(html):
+    return BeautifulSoup(html, "lxml").text.replace("\n", "")
+
+
+def get_book_from_url(url):
+    """
+        Extract data about the book from the page on the given url
+        returns book as tuple
+    """
     page = BeautifulSoup(requests.get(url).text, 'html.parser')
 
-    title = page.find('meta',{'property':'og:title'}).attrs['content']
-    author = get_book_author_from_page(page)
-    img_url = page.find('meta',{'property':'og:image:secure_url'}).attrs['content']
-    url = page.find('meta',{'property':'og:url'}).attrs['content']
-    description = page.find('meta',{'property':'og:description'}).attrs['content']
+    title = clean_book_html_data(page.find('meta', {'property': 'og:title'}).attrs['content'])
+    author = clean_book_html_data(get_book_author_from_page(page))
+    img_url = page.find('meta', {'property': 'og:image:secure_url'}).attrs['content']
+    url = page.find('meta', {'property': 'og:url'}).attrs['content']
+    description = page.find('meta', {'property': 'og:description'}).attrs['content']
 
-    return (title,author,url,img_url,description)
+    return title, author, url, img_url, description
 
-'''
-    Generate markdown representing the given book, and the given list position
-'''
+
 def generate_markdown_from_book(book, i):
-
-    description = book[4] if (len(book[4]) <= 500) else (book[4][:500] + " ...")
+    """
+        Generate markdown representing the given book, and the given list position
+    """
+    description = (book[4] if (len(book[4]) <= 500) else (book[4][:500] + " ...")).replace("\n", "  \n>")
 
     return f"![{book[0]}]({book[3]})\n" + \
-        f"## {i}. {book[0]}\n" + \
-        f"{book[1]}\n\n" + \
-        f"[{book[2]}]({book[2]})\n" + \
-        f">{description}\n"
+           f"## {i}. {book[0]}\n" + \
+           f"{book[1]}\n\n" + \
+           f"[{book[2]}]({book[2]})\n" + \
+           f">{description}\n"
 
-'''
-    Generate main markdown body to reprensent the given list of books
-'''
+
 def generate_markdown_from_books(books):
+    """
+        Generate main markdown body to represent the given list of books
+    """
+    print("Generating markdown... ", end="")
 
-    print("Generating markdown... ",end="")
+    markdown = f"*Oppdatert {datetime.datetime.now().date().isoformat()}*" + """\n\n>Liste over bøker jeg ønsker å 
+    fylle bokhylla med, der interesse-tyngdepunktet ligger i toppen.\n\n """
 
-    markdown = """>Liste over bøker jeg ønsker å fylle bokhylla med, der interesse-tyngdepunktet ligger i toppen.\n>\n><cite>- Mathias</cite>\n\n"""
-
-    markdown += generate_markdown_from_book(books.pop(0),1)
-
-    for i,book in enumerate(books):
-        book_markdown = "---\n" + generate_markdown_from_book(book, i+2)
+    for i, book in enumerate(books):
+        book_markdown = ("---\n" if i > 0 else "") + generate_markdown_from_book(book, i + 1)
         markdown += book_markdown
 
-    print(colored("Done","green"))
+    print(colored("Done", "green"))
 
     return markdown
 
-'''
-    - Retrieve book URLs from defined Bear page
-    - Extract book data from URLs
-    - Generate markdown source from data
-'''
-def generate_markdown():
 
+def generate_markdown():
+    """
+        - Retrieve book URLs from defined Bear page
+        - Extract book data from URLs
+        - Generate markdown source from data
+    """
     # Terminal colors
     init()
 
     # Retrieve book urls
     urls = get_book_urls()
 
-    # Get adlibris data from URLs
+    # Get Adlibris data from URLs
     books = [get_book_from_url(url) for url in urls]
 
     return generate_markdown_from_books(books)
