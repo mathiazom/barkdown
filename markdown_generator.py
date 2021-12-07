@@ -106,8 +106,9 @@ def generate_markdown_from_books(books):
     """
     print("Generating markdown... ", end="")
 
-    markdown = f"*Oppdatert {datetime.datetime.now().date().isoformat()}*" + """\n\n>Liste over bøker jeg ønsker å 
-    fylle bokhylla med, der interesse-tyngdepunktet ligger i toppen.\n\n """
+    markdown = f"*Oppdatert {datetime.datetime.now().date().isoformat()}*"
+
+    markdown += """\n\n>Liste over bøker jeg ønsker å fylle bokhylla med, der interesse-tyngdepunktet ligger i toppen.\n\n """
 
     for i, book in enumerate(books):
         book_markdown = ("---\n" if i > 0 else "") + generate_markdown_from_book(book, i + 1)
