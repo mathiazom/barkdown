@@ -1,20 +1,24 @@
 import datetime
+from os import environ
 
 import requests
 import re
 from bs4 import BeautifulSoup
 from colorama import init
+from dotenv import load_dotenv
 from termcolor import colored
+
+load_dotenv()
 
 '''
     Bear page acting as source for book URLs
 '''
-BOOK_URL_SOURCE = "https://foxtrot.bearblog.dev/bearbookslist/"
+BOOK_URL_SOURCE = environ["BOOK_URL_SOURCE"]
 
 '''
     Adlibris website prefix
 '''
-BOOK_DATA_SOURCE_PREFIX = "https://www.adlibris.com/no/bok/"
+BOOK_DATA_SOURCE_PREFIX = environ["BOOK_DATA_SOURCE_PREFIX"]
 
 
 def get_book_urls():
