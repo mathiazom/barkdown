@@ -77,25 +77,26 @@ def get_book_from_url(url):
     """
     page = BeautifulSoup(requests.get(url).text, 'html.parser')
 
-    title = clean_book_html_data(page.find('meta', {'property': 'og:title'}).attrs['content'])
-    author = clean_book_html_data(get_book_author_from_page(page))
-    img_url = page.find('meta', {'property': 'og:image:secure_url'}).attrs['content']
-    url = page.find('meta', {'property': 'og:url'}).attrs['content']
-    description = page.find('meta', {'property': 'og:description'}).attrs['content']
-
-    return title, author, url, img_url, description
+    return {
+        "title": clean_book_html_data(page.find('meta', {'property': 'og:title'}).attrs['content']),
+        "author": clean_book_html_data(get_book_author_from_page(page)),
+        "img_url": page.find('meta', {'property': 'og:image:secure_url'}).attrs['content'],
+        "url": page.find('meta', {'property': 'og:url'}).attrs['content'],
+        "description": page.find('meta', {'property': 'og:description'}).attrs['content']
+    }
 
 
 def generate_markdown_from_book(book, i):
     """
         Generate markdown representing the given book, and the given list position
     """
-    description = (book[4] if (len(book[4]) <= 500) else (book[4][:500] + " ...")).replace("\n", "  \n>")
+    desc = book['description']
+    description = (desc if (len(desc) <= 500) else (desc[:500] + " ...")).replace("\n", "  \n>")
 
-    return f"![{book[0]}]({book[3]})\n" + \
-           f"## {i}. {book[0]}\n" + \
-           f"{book[1]}\n\n" + \
-           f"[{book[2]}]({book[2]})\n" + \
+    return f"![{book['title']}]({book['img_url']})\n" + \
+           f"## {i}. {book['title']}\n" + \
+           f"{book['author']}\n\n" + \
+           f"[{book['url']}]({book['url']})\n" + \
            f">{description}\n"
 
 
